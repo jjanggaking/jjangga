@@ -351,8 +351,8 @@ def init():
 		f.append('')                              #bossData[6] : 메세지
 		bossData.append(f)
 		f = []
-		bossTime.append(datetime.datetime.now()+datetime.timedelta(days=365, hours = int(basicSetting[0])))
-		tmp_bossTime.append(datetime.datetime.now()+datetime.timedelta(days=365, hours = int(basicSetting[0])))
+		bossTime.append(datetime.datetime.now()+datetime.timedelta(days=365))
+		tmp_bossTime.append(datetime.datetime.now()+datetime.timedelta(days=365))
 		bossTimeString.append('99:99:99')
 		bossDateString.append('9999-99-99')
 		tmp_bossTimeString.append('99:99:99')
