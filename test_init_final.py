@@ -311,7 +311,10 @@ def init():
 	except ValueError:
 		raise Exception("[test_setting.ini] 파일 양식을 확인하세요.")
 	
-	tmp_now = datetime.datetime.now() + datetime.timedelta(hours = int(basicSetting[0]))
+	bossNum = int(len(boss_inputData)/6) 
+
+	fixed_bossNum = int(len(fixed_inputData)/7) 
+	tmp_now = datetime.datetime.now()
 	
 	if int(basicSetting[13]) == 0 :
 		endTime = tmp_now.replace(hour=int(basicSetting[4]), minute=int(basicSetting[5]), second = int(0))
