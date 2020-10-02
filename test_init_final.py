@@ -311,7 +311,7 @@ def init():
 	except ValueError:
 		raise Exception("[test_setting.ini] 파일 양식을 확인하세요.")
 	
-	tmp_now = datetime.datetime.now()
+	tmp_now = datetime.datetime.now() + datetime.timedelta(hours = int(basicSetting[0]))
 	
 	if int(basicSetting[13]) == 0 :
 		endTime = tmp_now.replace(hour=int(basicSetting[4]), minute=int(basicSetting[5]), second = int(0))
@@ -351,8 +351,8 @@ def init():
 		f.append('')                              #bossData[6] : 메세지
 		bossData.append(f)
 		f = []
-		bossTime.append(datetime.datetime.now()+datetime.timedelta(days=365))
-		tmp_bossTime.append(datetime.datetime.now()+datetime.timedelta(days=365))
+		bossTime.append(datetime.datetime.now()+datetime.timedelta(days=365, hours = int(basicSetting[0])))
+		tmp_bossTime.append(datetime.datetime.now()+datetime.timedelta(days=365, hours = int(basicSetting[0])))
 		bossTimeString.append('99:99:99')
 		bossDateString.append('9999-99-99')
 		tmp_bossTimeString.append('99:99:99')
@@ -752,7 +752,7 @@ def convertToInitialLetters(text):
 
 class taskCog(commands.Cog): 
 	def __init__(self, bot):
-		client = bot
+		self.bot = bot
 
 		self.main_task.start()
 
@@ -763,7 +763,7 @@ class taskCog(commands.Cog):
 
 	@main_task.before_loop
 	async def before_tast(self):
-		await client.wait_until_ready()
+		await self.bot.wait_until_ready()
 
 	################ 명존쎄 ################ 
 	@commands.command(name=command[8][0], aliases=command[8][1:])
@@ -794,13 +794,13 @@ class taskCog(commands.Cog):
 		if basicSetting[21] != "1":
 			print("명치복구완료!")
 			await dbLoad()
-			await client.get_channel(channel).send( '< 다시 왔습니다!(보이스 미사용) >', tts=False)
+			await self.bot.get_channel(channel).send( '< 다시 왔습니다!(보이스 미사용) >', tts=False)
 
 		boss_task = asyncio.Task(self.boss_check())
 		return
 
 	async def boss_check(self):
-		await client.wait_until_ready()
+		await self.bot.wait_until_ready()
 
 		global channel
 		global endTime
@@ -842,20 +842,20 @@ class taskCog(commands.Cog):
 		global kill_Time
 		
 		if chflg == 1 : 
-			if len(client.voice_clients) == 0 :
+			if len(self.bot.voice_clients) == 0 :
 				if basicSetting[21] == "1":
-					await client.get_channel(basicSetting[6]).connect(reconnect=True)
-					if client.voice_clients[0].is_connected() :
+					await self.bot.get_channel(basicSetting[6]).connect(reconnect=True)
+					if self.bot.voice_clients[0].is_connected() :
 						await dbLoad()
-						await client.get_channel(channel).send( '< 다시 왔습니다! >', tts=False)
+						await self.bot.get_channel(channel).send( '< 다시 왔습니다! >', tts=False)
 						print("명치복구완료!")
 
-		while not client.is_closed():
+		while not self.bot.is_closed():
 			############ 워닝잡자! ############
 			if log_stream.getvalue().find("Awaiting") != -1:
 				log_stream.truncate(0)
 				log_stream.seek(0)
-				await client.get_channel(channel).send( '< 디코접속에러! 잠깐 나갔다 올께요! >', tts=False)
+				await self.bot.get_channel(channel).send( '< 디코접속에러! 잠깐 나갔다 올께요! >', tts=False)
 				await dbSave()
 				break
 			
@@ -877,7 +877,7 @@ class taskCog(commands.Cog):
 					await data_list_Save("item_list.ini", "-----아이템목록-----", item_Data)
 					print("보탐봇재시작!")
 					endTime = endTime + datetime.timedelta(days = int(basicSetting[13]))
-					for voice_client in client.voice_clients:
+					for voice_client in self.bot.voice_clients:
 						if voice_client.is_playing():
 							voice_client.stop()
 						await voice_client.disconnect(force=True)
@@ -902,16 +902,27 @@ class taskCog(commands.Cog):
 
 				################ 고정 보스 확인 ################ 
 				for i in range(fixed_bossNum):
-				
+					################ before_alert1 ################ 
+					if fixed_bossTime[i] <= priv0 and fixed_bossTime[i] > priv:
+						if basicSetting[3] != '0':
+							if fixed_bossFlag0[i] == False:
+								fixed_bossFlag0[i] = True
+								await self.bot.get_channel(channel).send("```" + fixed_bossData[i][0] + ' ' + basicSetting[3] + '분 전 ' + fixed_bossData[i][3] +' [' +  fixed_bossTime[i].strftime('%H:%M:%S') + ']```', tts=False)
+								try:
+									if basicSetting[21] == "1":
+										await PlaySound(self.bot.voice_clients[0], './sound/' + fixed_bossData[i][0] + '알림1.mp3')
+								except:
+									pass
+
 					################ before_alert ################ 
 					if fixed_bossTime[i] <= priv and fixed_bossTime[i] > now:
 						if basicSetting[1] != '0' :
 							if fixed_bossFlag[i] == False:
 								fixed_bossFlag[i] = True
-								await client.get_channel(channel).send("```" + fixed_bossData[i][0] + ' ' + basicSetting[1] + '분 전 ' + fixed_bossData[i][3] +' [' +  fixed_bossTime[i].strftime('%H:%M:%S') + ']```', tts=False)
+								await self.bot.get_channel(channel).send("```" + fixed_bossData[i][0] + ' ' + basicSetting[1] + '분 전 ' + fixed_bossData[i][3] +' [' +  fixed_bossTime[i].strftime('%H:%M:%S') + ']```', tts=False)
 								try:
 									if basicSetting[21] == "1":
-										await PlaySound(client.voice_clients[0], './sound/' + fixed_bossData[i][0] + '알림.mp3')
+										await PlaySound(self.bot.voice_clients[0], './sound/' + fixed_bossData[i][0] + '알림.mp3')
 								except:
 									pass
 					
@@ -924,42 +935,41 @@ class taskCog(commands.Cog):
 								description= "```" + fixed_bossData[i][0] + fixed_bossData[i][4] + "```" ,
 								color=0x00ff00
 								)
-						await client.get_channel(channel).send(embed=embed, tts=False)
+						await self.bot.get_channel(channel).send(embed=embed, tts=False)
 						try:
 							if basicSetting[21] == "1":
-								await PlaySound(client.voice_clients[0], './sound/' + fixed_bossData[i][0] + '젠.mp3')
+								await PlaySound(self.bot.voice_clients[0], './sound/' + fixed_bossData[i][0] + '젠.mp3')
 						except:
 							pass
 
 				################ 일반 보스 확인 ################ 
 				for i in range(bossNum):
-				
 					################ before_alert1 ################ 
 					if bossTime[i] <= priv0 and bossTime[i] > priv:
 						if basicSetting[3] != '0':
 							if bossFlag0[i] == False:
 								bossFlag0[i] = True
-								if bossData[i][7] != '' :
-									await self.bot.get_channel(channel).send("```" + bossData[i][0] + ' ' + basicSetting[3] + '분 전 ' + bossData[i][3] +' [' +  bossTimeString[i] + ']' + '\n<' + bossData[i][6] + '>```', tts=False)
+								if bossData[i][6] != '' :
+									await self.bot.get_channel(channel).send("```" + bossData[i][0] + ' ' + basicSetting[3] + '분 전 ' + bossData[i][3] + " [" +  bossTimeString[i] + "]" + '\n<' + bossData[i][6] + '>```', tts=False)
 								else :
-									await self.bot.get_channel(channel).send("```" + bossData[i][0] + ' ' + basicSetting[3] + '분 전 ' + bossData[i][3] +' [' +  bossTimeString[i] + ']```', tts=False)
-                        					try:
-									if basicSetting[25] == "1":
+									await self.bot.get_channel(channel).send("```" + bossData[i][0] + ' ' + basicSetting[3] + '분 전 ' + bossData[i][3] + " [" +  bossTimeString[i] + "]```", tts=False)
+								try:
+									if basicSetting[21] == "1":
 										await PlaySound(self.bot.voice_clients[0], './sound/' + bossData[i][0] + '알림1.mp3')
 								except:
 									pass
-					
-					################ before_alert ################ 
+
+					################ before_alert ################
 					if bossTime[i] <= priv and bossTime[i] > now:
 						if basicSetting[1] != '0' :
 							if bossFlag[i] == False:
 								bossFlag[i] = True
-								if bossData[i][7] != '' :
-									await self.bot.get_channel(channel).send("```" + bossData[i][0] + ' ' + basicSetting[1] + '분 전 ' + bossData[i][3] +' [' +  bossTimeString[i] + ']' + '\n<' + bossData[i][6] + '>```', tts=False)
+								if bossData[i][6] != '' :
+									await self.bot.get_channel(channel).send("```" + bossData[i][0] + ' ' + basicSetting[1] + '분 전 ' + bossData[i][3] + " [" +  bossTimeString[i] + "]" + '\n<' + bossData[i][6] + '>```', tts=False)
 								else :
-									await self.bot.get_channel(channel).send("```" + bossData[i][0] + ' ' + basicSetting[1] + '분 전 ' + bossData[i][3] +' [' +  bossTimeString[i] + ']```', tts=False)
+									await self.bot.get_channel(channel).send("```" + bossData[i][0] + ' ' + basicSetting[1] + '분 전 ' + bossData[i][3] + " [" +  bossTimeString[i] + "]```", tts=False)
 								try:
-									if basicSetting[25] == "1":
+									if basicSetting[21] == "1":
 										await PlaySound(self.bot.voice_clients[0], './sound/' + bossData[i][0] + '알림.mp3')
 								except:
 									pass
@@ -984,10 +994,10 @@ class taskCog(commands.Cog):
 									description= "```" + bossData[i][0] + bossData[i][4] + "```" ,
 									color=0x00ff00
 									)
-						await client.get_channel(channel).send(embed=embed, tts=False)
+						await self.bot.get_channel(channel).send(embed=embed, tts=False)
 						try:
 							if basicSetting[21] == "1":
-								await PlaySound(client.voice_clients[0], './sound/' + bossData[i][0] + '젠.mp3')
+								await PlaySound(self.bot.voice_clients[0], './sound/' + bossData[i][0] + '젠.mp3')
 						except:
 							pass
 
@@ -1007,10 +1017,10 @@ class taskCog(commands.Cog):
 									bossMungFlag[i] = False
 									bossMungCnt[i] = 0
 									if bossData[i][2] == '0':
-										await client.get_channel(channel).send(f'```자동 미입력 횟수 {basicSetting[17]}회 초과! [{bossData[i][0]}] 삭제!```', tts=False)
+										await self.bot.get_channel(channel).send(f'```자동 미입력 횟수 {basicSetting[17]}회 초과! [{bossData[i][0]}] 삭제!```', tts=False)
 										print ('자동미입력 횟수초과 <' + bossData[i][0] + ' 삭제완료>')
 									else:
-										await client.get_channel(channel).send(f'```자동 멍처리 횟수 {basicSetting[17]}회 초과! [{bossData[i][0]}] 삭제!```', tts=False)
+										await self.bot.get_channel(channel).send(f'```자동 멍처리 횟수 {basicSetting[17]}회 초과! [{bossData[i][0]}] 삭제!```', tts=False)
 										print ('자동멍처리 횟수초과 <' + bossData[i][0] + ' 삭제완료>')
 									#await dbSave()
 									
@@ -1024,15 +1034,15 @@ class taskCog(commands.Cog):
 										tmp_bossTime[i] = bossTime[i] = nextTime = tmp_bossTime[i]+datetime.timedelta(hours=int(bossData[i][1]), minutes=int(bossData[i][5]))
 										tmp_bossTimeString[i] = bossTimeString[i] = nextTime.strftime('%H:%M:%S')
 										tmp_bossDateString[i] = bossDateString[i] = nextTime.strftime('%Y-%m-%d')
-										await client.get_channel(channel).send("```" +  bossData[i][0] + ' 미입력 됐습니다.```', tts=False)
+										await self.bot.get_channel(channel).send("```" +  bossData[i][0] + ' 미입력 됐습니다.```', tts=False)
 										embed = discord.Embed(
 											description= '```다음 ' + bossData[i][0] + ' ' + bossTimeString[i] + '입니다.```',
 											color=0xff0000
 											)
-										await client.get_channel(channel).send(embed=embed, tts=False)
+										await self.bot.get_channel(channel).send(embed=embed, tts=False)
 										try:
 											if basicSetting[21] == "1":
-												await PlaySound(client.voice_clients[0], './sound/' + bossData[i][0] + '미입력.mp3')
+												await PlaySound(self.bot.voice_clients[0], './sound/' + bossData[i][0] + '미입력.mp3')
 										except:
 											pass
 									################ 멍 보스 ################
@@ -1044,21 +1054,21 @@ class taskCog(commands.Cog):
 										tmp_bossTime[i] = bossTime[i] = nextTime = tmp_bossTime[i]+datetime.timedelta(hours=int(bossData[i][1]), minutes=int(bossData[i][5]))
 										tmp_bossTimeString[i] = bossTimeString[i] = nextTime.strftime('%H:%M:%S')
 										tmp_bossDateString[i] = bossDateString[i] = nextTime.strftime('%Y-%m-%d')
-										await client.get_channel(channel).send("```" + bossData[i][0] + ' 멍 입니다.```')
+										await self.bot.get_channel(channel).send("```" + bossData[i][0] + ' 멍 입니다.```')
 										embed = discord.Embed(
 											description= '```다음 ' + bossData[i][0] + ' ' + bossTimeString[i] + '입니다.```',
 											color=0xff0000
 											)
-										await client.get_channel(channel).send(embed=embed, tts=False)
+										await self.bot.get_channel(channel).send(embed=embed, tts=False)
 										try:
 											if basicSetting[21] == "1":
-												await PlaySound(client.voice_clients[0], './sound/' + bossData[i][0] + '멍.mp3')
+												await PlaySound(self.bot.voice_clients[0], './sound/' + bossData[i][0] + '멍.mp3')
 										except:
 											pass
 
 			await asyncio.sleep(1) # task runs every 60 seconds
 		
-		for voice_client in client.voice_clients:
+		for voice_client in self.bot.voice_clients:
 			if voice_client.is_playing():
 				voice_client.stop()
 			await voice_client.disconnect(force=True)
@@ -1081,7 +1091,7 @@ class taskCog(commands.Cog):
 
 class mainCog(commands.Cog): 
 	def __init__(self, bot):
-		client = bot
+		self.bot = bot
 
 	################ 보탐봇 입장 ################ 	
 	@commands.has_permissions(manage_messages=True)
@@ -1116,37 +1126,37 @@ class mainCog(commands.Cog):
 
 			await ctx.send(f"< 텍스트채널 [{ctx.message.channel.name}] 접속완료 >\n< 음성채널 접속 후 [{command[5][0]}] 명령을 사용 하세요 >", tts=False)
 			
-			print('< 텍스트채널 [' + client.get_channel(basicSetting[7]).name + '] 접속완료>')
+			print('< 텍스트채널 [' + self.bot.get_channel(basicSetting[7]).name + '] 접속완료>')
 			if basicSetting[6] != "" and basicSetting[21] == "1":
-				await client.get_channel(basicSetting[6]).connect(reconnect=True)
-				print('< 음성채널 [' + client.get_channel(basicSetting[6]).name + '] 접속완료>')
+				await self.bot.get_channel(basicSetting[6]).connect(reconnect=True)
+				print('< 음성채널 [' + self.bot.get_channel(basicSetting[6]).name + '] 접속완료>')
 			if basicSetting[8] != "":
 				if str(basicSetting[8]) in channel_id:
-					print('< 사다리채널 [' + client.get_channel(int(basicSetting[8])).name + '] 접속완료 >')
+					print('< 사다리채널 [' + self.bot.get_channel(int(basicSetting[8])).name + '] 접속완료 >')
 				else:
 					basicSetting[8] = ""
 					print(f"사다리채널 ID 오류! [{command[28][0]} 사다리] 명령으로 재설정 바랍니다.")
 			if basicSetting[11] != "":
 				if str(basicSetting[11]) in channel_id:
-					print('< 정산채널 [' + client.get_channel(int(basicSetting[11])).name + '] 접속완료>')
+					print('< 정산채널 [' + self.bot.get_channel(int(basicSetting[11])).name + '] 접속완료>')
 				else:
 					basicSetting[11] = ""
 					print(f"정산채널 ID 오류! [{command[28][0]} 정산] 명령으로 재설정 바랍니다.")
 			if basicSetting[18] != "":
 				if str(basicSetting[18]) in channel_id:
-					print('< 척살채널 [' + client.get_channel(int(basicSetting[18])).name + '] 접속완료>')
+					print('< 척살채널 [' + self.bot.get_channel(int(basicSetting[18])).name + '] 접속완료>')
 				else:
 					basicSetting[18] = ""
 					print(f"척살채널 ID 오류! [{command[28][0]} 척살] 명령으로 재설정 바랍니다.")
 			if basicSetting[19] != "":
 				if str(basicSetting[19]) in channel_id:
-					print('< 경주채널 [' + client.get_channel(int(basicSetting[19])).name + '] 접속완료>')
+					print('< 경주채널 [' + self.bot.get_channel(int(basicSetting[19])).name + '] 접속완료>')
 				else:
 					basicSetting[19] = ""
 					print(f"경주채널 ID 오류! [{command[28][0]} 경주] 명령으로 재설정 바랍니다.")
 			if basicSetting[20] != "":
 				if str(basicSetting[20]) in channel_id:
-					print('< 아이템채널 [' + client.get_channel(int(basicSetting[20])).name + '] 접속완료>')
+					print('< 아이템채널 [' + self.bot.get_channel(int(basicSetting[20])).name + '] 접속완료>')
 				else:
 					basicSetting[20] = ""
 					print(f"아이템채널 ID 오류! [{command[28][0]} 아이템] 명령으로 재설정 바랍니다.")
@@ -1158,7 +1168,7 @@ class mainCog(commands.Cog):
 
 			chflg = 1
 		else:
-			for guild in client.guilds:
+			for guild in self.bot.guilds:
 				for text_channel in guild.text_channels:
 					if basicSetting[7] == text_channel.id:
 						curr_guild_info = guild
@@ -1172,7 +1182,7 @@ class mainCog(commands.Cog):
 			def reaction_check(reaction, user):
 				return (reaction.message.id == guild_error_message.id) and (user.id == ctx.author.id) and (str(reaction) in emoji_list)
 			try:
-				reaction, user = await client.wait_for('reaction_add', check = reaction_check, timeout = 10)
+				reaction, user = await self.bot.wait_for('reaction_add', check = reaction_check, timeout = 10)
 			except asyncio.TimeoutError:
 				return await ctx.send(f"시간이 초과됐습니다. **[{curr_guild_info.name}]** 서버 **[{setting_channel_name}]** 채널에서 사용해주세요!")
 
@@ -1272,18 +1282,18 @@ class mainCog(commands.Cog):
 		if ctx.message.channel.id == basicSetting[7]:
 			setting_val = '보탐봇버전 : Server Ver. 22 (2020. 9. 29.)\n'
 			if basicSetting[6] != "" :
-				setting_val += '음성채널 : ' + client.get_channel(basicSetting[6]).name + '\n'
-			setting_val += '텍스트채널 : ' + client.get_channel(basicSetting[7]).name +'\n'
+				setting_val += '음성채널 : ' + self.bot.get_channel(basicSetting[6]).name + '\n'
+			setting_val += '텍스트채널 : ' + self.bot.get_channel(basicSetting[7]).name +'\n'
 			if basicSetting[8] != "" :
-				setting_val += '사다리채널 : ' + client.get_channel(int(basicSetting[8])).name + '\n'
+				setting_val += '사다리채널 : ' + self.bot.get_channel(int(basicSetting[8])).name + '\n'
 			if basicSetting[11] != "" :
-				setting_val += '정산채널 : ' + client.get_channel(int(basicSetting[11])).name + '\n'
+				setting_val += '정산채널 : ' + self.bot.get_channel(int(basicSetting[11])).name + '\n'
 			if basicSetting[18] != "" :
-				setting_val += '척살채널 : ' + client.get_channel(int(basicSetting[18])).name + '\n'
+				setting_val += '척살채널 : ' + self.bot.get_channel(int(basicSetting[18])).name + '\n'
 			if basicSetting[19] != "" :
-				setting_val += '경주채널 : ' + client.get_channel(int(basicSetting[19])).name + '\n'
+				setting_val += '경주채널 : ' + self.bot.get_channel(int(basicSetting[19])).name + '\n'
 			if basicSetting[20] != "" :
-				setting_val += '아이템채널 : ' + client.get_channel(int(basicSetting[20])).name + '\n'
+				setting_val += '아이템채널 : ' + self.bot.get_channel(int(basicSetting[20])).name + '\n'
 			setting_val += '보스젠알림시간1 : ' + basicSetting[1] + ' 분 전\n'
 			setting_val += '보스젠알림시간2 : ' + basicSetting[3] + ' 분 전\n'
 			setting_val += '보스멍확인시간 : ' + basicSetting[2] + ' 분 후\n'
@@ -1308,7 +1318,7 @@ class mainCog(commands.Cog):
 	@commands.command(name=command[3][0], aliases=command[3][1:])
 	async def chChk_(self, ctx):
 		if ctx.message.channel.id == basicSetting[7]:
-			channel_name, channel_id, channel_voice_name, channel_voice_id = await get_guild_channel_info(client)
+			channel_name, channel_id, channel_voice_name, channel_voice_id = await get_guild_channel_info(self.bot)
 
 			ch_information = []
 			cnt = 0
@@ -1318,7 +1328,7 @@ class mainCog(commands.Cog):
 			cntV = 0
 			ch_voice_information.append("")
 
-			for guild in client.guilds:
+			for guild in self.bot.guilds:
 				ch_information[cnt] = f"{ch_information[cnt]}👑  {guild.name}  👑\n"
 				for i in range(len(channel_name)):
 					for text_channel in guild.text_channels:
@@ -1412,8 +1422,8 @@ class mainCog(commands.Cog):
 			contents = repo.get_contents("test_setting.ini")
 			repo.update_file(contents.path, "test_setting", result_textCH, contents.sha)
 			
-			await ctx.send( f"명령어 채널이 < {ctx.message.channel.name} >에서 < {client.get_channel(channel).name} > 로 이동되었습니다.", tts=False)
-			await client.get_channel(channel).send( f"< {client.get_channel(channel).name} 이동완료 >", tts=False)
+			await ctx.send( f"명령어 채널이 < {ctx.message.channel.name} >에서 < {self.bot.get_channel(channel).name} > 로 이동되었습니다.", tts=False)
+			await self.bot.get_channel(channel).send( f"< {self.bot.get_channel(channel).name} 이동완료 >", tts=False)
 		else:
 			return
 
@@ -1442,7 +1452,7 @@ class mainCog(commands.Cog):
 			voice_channel = ctx.author.voice.channel
 
 			print ('< ', basicSetting[6], ' >')
-			print ('> ', client.get_channel(voice_channel.id).name, ' <')
+			print ('> ', self.bot.get_channel(voice_channel.id).name, ' <')
 
 			if basicSetting[6] == "":
 				inidata_voiceCH = repo.get_contents("test_setting.ini")
@@ -1476,7 +1486,7 @@ class mainCog(commands.Cog):
 				contents = repo.get_contents("test_setting.ini")
 				repo.update_file(contents.path, "test_setting", result_voiceCH, contents.sha)
 
-			await ctx.send('< 음성채널 [' + client.get_channel(voice_channel.id).name + '] 접속완료>', tts=False)
+			await ctx.send('< 음성채널 [' + self.bot.get_channel(voice_channel.id).name + '] 접속완료>', tts=False)
 		else:
 			return
 
@@ -1569,7 +1579,7 @@ class mainCog(commands.Cog):
 			await dbSave()
 			await data_list_Save("kill_list.ini", "-----척살명단-----", kill_Data)
 			await data_list_Save("item_list.ini", "-----아이템목록-----", item_Data)
-			for voice_client in client.voice_clients:
+			for voice_client in self.bot.voice_clients:
 				if voice_client.is_playing():
 					voice_client.stop()
 				await voice_client.disconnect(force=True)
@@ -2034,7 +2044,7 @@ class mainCog(commands.Cog):
 		if ctx.message.channel.id == basicSetting[7]:
 			msg = ctx.message.content[len(ctx.invoked_with)+1:]
 			sayMessage = msg
-			await client.change_presence(status=discord.Status.dnd, activity=discord.Game(name=sayMessage, type=1), afk = False)
+			await self.bot.change_presence(status=discord.Status.dnd, activity=discord.Game(name=sayMessage, type=1), afk = False)
 			await ctx.send( '< 상태메세지 변경완료 >', tts=False)
 		else:
 			return
@@ -2748,7 +2758,7 @@ class mainCog(commands.Cog):
 				embed_list : list = []
 				embed_index : int = 0
 				embed_cnt : int = 0
-				embed = discord.Embed(title = '', description = f'`{client.user.name}\'s 창고`', color = 0x00ff00)
+				embed = discord.Embed(title = '', description = f'`{self.bot.user.name}\'s 창고`', color = 0x00ff00)
 				
 				embed_list.append(embed)
 
@@ -2877,7 +2887,7 @@ class mainCog(commands.Cog):
 			guild_list : str = ""
 			guild_name : str = ""
 
-			for i, gulid_name in enumerate(client.guilds):
+			for i, gulid_name in enumerate(self.bot.guilds):
 				guild_list += f"`{i+1}.` {gulid_name}\n"
 
 			embed = discord.Embed(
@@ -2889,13 +2899,13 @@ class mainCog(commands.Cog):
 
 			try:
 				await ctx.send(f"```떠나고 싶은 서버의 [숫자]를 입력하여 선택해 주세요```")
-				message_result : discord.Message = await client.wait_for("message", timeout = 10, check=(lambda message: message.channel == ctx.message.channel and message.author == ctx.message.author))
+				message_result : discord.Message = await self.bot.wait_for("message", timeout = 10, check=(lambda message: message.channel == ctx.message.channel and message.author == ctx.message.author))
 			except asyncio.TimeoutError:
 				return await ctx.send(f"```서버 선택 시간이 초과됐습니다! 필요시 명령어를 재입력해 주세요```")
 				
 			try:
-				guild_name = client.guilds[int(message_result.content)-1].name
-				await client.get_guild(client.guilds[int(message_result.content)-1].id).leave()
+				guild_name = self.bot.guilds[int(message_result.content)-1].name
+				await self.bot.get_guild(self.bot.guilds[int(message_result.content)-1].id).leave()
 				return await ctx.send(f"```[{guild_name}] 서버에서 떠났습니다.!```")
 			except ValueError:
 				return			
@@ -3002,7 +3012,7 @@ class mainCog(commands.Cog):
 		def reaction_check(reaction, user):
 			return (reaction.message.id == message_rock_paper_scissors.id) and (user.id == ctx.author.id) and (str(reaction) in reaction_emoji)
 		try:
-			reaction_result, user = await client.wait_for('reaction_add', check = reaction_check, timeout = int(basicSetting[5]))
+			reaction_result, user = await self.bot.wait_for('reaction_add', check = reaction_check, timeout = int(basicSetting[5]))
 		except asyncio.TimeoutError:
 			return await ctx.send(f"시간이 초과됐습니다. ")
 		
@@ -3046,8 +3056,8 @@ class mainCog(commands.Cog):
 		repo.update_file(contents.path, "test_setting", result_voice_use, contents.sha)
 
 		if basicSetting[6] != "":
-			await client.get_channel(basicSetting[6]).connect(reconnect=True)
-			if client.voice_clients[0].is_connected() :
+			await self.bot.get_channel(basicSetting[6]).connect(reconnect=True)
+			if self.bot.voice_clients[0].is_connected() :
 				print("보이스 사용 설정 완료!")
 				return await ctx.send(f"```보이스를 사용하도록 설정하였습니다.!```")
 
